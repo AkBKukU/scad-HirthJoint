@@ -2,7 +2,7 @@
 /*!
 A fully parametric Hirth Joint that creates the teeth, backing, and a hole. The
 part's center is set to the center point of two mating parts. The teeth are 
-offset by the distance of 1/2 the angle of one tooth. This allows mating parts 
+offset by the distance of 1/4 the angle of one tooth. This allows mating parts 
 to mesh as you would normally expect.
 
 
@@ -99,4 +99,4 @@ module hirth_teeth(radius = 4.5, depth = 1, count = 8) {
 }
 
 
-hirth(teethDepth = 1.5, radius = 10);
+hirth(teethDepth = 1.5, radius = 8);
