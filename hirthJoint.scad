@@ -1,94 +1,98 @@
-// Configuration
-GEAR = 1;
-TEST = 2;
-WHOLE = 0;
+//! Hirth joint implementation. 
+/*!
+A fully parametric Hirth Joint that creates the teeth, backing, and a hole. The
+part's center is set to the center point of two mating parts.
 
-PARTNO = TEST; // part number
-$fn=50; // Resolution
-
-// Teeth Info
-teethCount = 16;
-teethDepth = 2;
-
-// Backing Info
-backRadius = 10;
-backDepth = 4;
-backLip = 0.5;
-
-// Hole Info
-holeRadius = 4;
-
-// Test Info
-handleLength = 20;
-handleHeight = 2;
-handleWidth = 5;
-
-// Tolerances
-clearance = 0.2; // Clearance between mating parts
-teethInset = 0; // Pull teeth in towards backing
-
-
-// Calculations
-teethAngle =  360 / teethCount / 2; // Teeth spacing as an angle
-teethOffset = teethAngle / 2; // Angle offset to get proper alignment
-teethRadius = backRadius - backLip;
-
-module backing() {
-	translate ([0,0,-backDepth]) {
-		cylinder(h=backDepth,r=backRadius);
+\param radius Radius of entire part
+\param teethDepth Mesh distance for the teeth
+\param teethInset Add clearance to out edge for teeth
+\param count Number of teeth
+\param backingDepth Thickness of backing
+\param clearance Clearance added to hole radius
+\param holeRadius Radius of center hole
+*/
+module hirth( radius = 5, teethDepth = 1, teethInset = 1, count = 8, 
+	backingDepth = 3, clearance = 0.2, holeRadius = 2 ) {
+	
+	difference() {
+		// Create Hirth gear
+		translate ([0,0,-teethDepth/2])	union() {
+			hirth_backing(radius, backingDepth);
+			teethOffset = angle / 2; // Angle offset to get proper alignment
+			rotate([0,0,teethOffset]) union() {
+		// Create needed number of teeth
+			hirth_teeth(radius-teethInset, teethDepth, count);
+		}
+		// Subtract center hole
+		cylinder(h=(backingDepth+teethDepth)*2, r=holeRadius+clearance, 
+			center = true);
 	}
 }
 
-module tooth() {
-	toothPoints = [
+
+//! Backing cylinder
+/*!
+Cylinder to guarantee the teeth have a surface to be attached to
+
+\param radius Radius of the teeth
+\param depth Depth of the backing material
+*/
+module hirth_backing(radius = 5, depth = 3) {
+	translate ([0,0,-depth]) {
+		cylinder(h=depth,r=radius);
+	}
+}
+
+
+//! Tooth design
+/*!
+Create the model for a half of a single tooth. The center point *must* be half 
+the depth to get proper meshing. Especially if there is no hole. 
+
+\param radius Radius of the teeth
+\param depth Depth of the tooth
+\param count Number of teeth 
+*/
+module hirth_tooth(radius = 4.5, depth = 1, count = 8) {
+	angle =  360 / count / 2; // Teeth spacing as an angle
+	points = [
 		[0,0,0],
-		[0, teethRadius, 0],
-		[0, teethRadius, teethDepth],
-		[0,0,teethDepth/2],
-		[ teethRadius * sin(teethAngle), teethRadius * cos(teethAngle) , 0],
+		[0, radius, 0],
+		[0, radius, depth],
+		[0,0,depth/2],
+		// Find point on circle where next point would be
+		[ radius * sin(angle), radius * cos(angle) , 0],
 	];
-    
-    toothFaces = [
+	
+	faces = [
 		[0,1,2,3],
 		[0,4,1],
 		[3,2,4],
 		[1,4,2],
 		[0,3,4]
 	];
-	polyhedron( toothPoints, toothFaces );
+	polyhedron( points, faces );
 }
 
-module teeth() {
-	rotate([0,0,teethOffset]) union() {
-		for ( i = [1:teethCount]) {
-			rotate([0,0,(i-1) * teethAngle*2]) {
-				tooth();	
-				mirror([1,0,0]) tooth();
-			}
+//! Teeth face
+/*!
+The full face of teeth. Result is offset by the distance of 1/2 the angle of 
+one tooth. This allows mating parts to mesh as you would normally expect.
+
+\param radius Radius of the teeth
+\param depth Depth of the tooth
+\param count Number of teeth 
+*/
+module hirth_teeth(radius = 4.5, depth = 1, count = 8) {
+	angle =  360 / count / 2; // Teeth spacing as an angle
+	for ( i = [1:count]) {
+		// Create tooth and rotate to next position
+		rotate([0,0,(i-1) * angle*2]) {
+			hirth_tooth(radius, depth,count);	
+			mirror([1,0,0]) hirth_tooth(radius, depth,count);
 		}
 	}
 }
 
 
-module handle() {
-	translate ([0,handleLength/2,-backDepth+handleHeight/2]) {
-	    cube([handleWidth,handleLength,handleHeight],center=true);
-	}
-}
-
-module gear() {
-	difference() {
-		union() {
-			backing();
-			//tooth();
-			teeth();
-			if(PARTNO == 2) {
-				handle(mountDepth=1.5);
-			}
-		}
-		cylinder(h=(backDepth+teethDepth)*2, r=holeRadius+clearance, center = true);
-	}
-}
-
-
-gear();
+hirth(teethDepth = 1.5, radius = 10);
