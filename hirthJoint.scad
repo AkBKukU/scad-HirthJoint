@@ -14,14 +14,14 @@ part's center is set to the center point of two mating parts.
 module hirth( radius = 5, teethDepth = 1, teethInset = 1, count = 8, 
 	backingDepth = 3, clearance = 0.2, holeRadius = 2 ) {
 	
+	angle =  360 / count / 2; // Teeth spacing as an angle
+	teethOffset = angle / 2; // Angle offset to get proper alignment
 	difference() {
 		// Create Hirth gear
 		translate ([0,0,-teethDepth/2])	union() {
 			hirth_backing(radius, backingDepth);
-			teethOffset = angle / 2; // Angle offset to get proper alignment
-			rotate([0,0,teethOffset]) union() {
-		// Create needed number of teeth
-			hirth_teeth(radius-teethInset, teethDepth, count);
+			rotate([0,0,teethOffset]) hirth_teeth(radius-teethInset,
+			teethDepth, count);
 		}
 		// Subtract center hole
 		cylinder(h=(backingDepth+teethDepth)*2, r=holeRadius+clearance, 
@@ -85,12 +85,14 @@ one tooth. This allows mating parts to mesh as you would normally expect.
 */
 module hirth_teeth(radius = 4.5, depth = 1, count = 8) {
 	angle =  360 / count / 2; // Teeth spacing as an angle
-	for ( i = [1:count]) {
+	// Create needed number of teeth
+	union() for ( i = [1:count]) { 
 		// Create tooth and rotate to next position
 		rotate([0,0,(i-1) * angle*2]) {
 			hirth_tooth(radius, depth,count);	
 			mirror([1,0,0]) hirth_tooth(radius, depth,count);
 		}
+	
 	}
 }
 
